@@ -1,1 +1,7 @@
 C:\Users\Tyler\Desktop\Repositories\Chaka's Proxy\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\bin\Debug\Chaka_Proxy.exe.config
+C:\Users\Tyler\Desktop\Repositories\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\bin\Debug\Chaka_Proxy.exe.config
+C:\Users\Tyler\Desktop\Repositories\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\bin\Debug\Chaka_Proxy.exe
+C:\Users\Tyler\Desktop\Repositories\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\bin\Debug\Chaka_Proxy.pdb
+C:\Users\Tyler\Desktop\Repositories\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\obj\Debug\Chaka_Proxy.exe
+C:\Users\Tyler\Desktop\Repositories\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\obj\Debug\Chaka_Proxy.pdb
+C:\Users\Tyler\Desktop\Repositories\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\obj\Debug\Chaka_Proxy.csprojResolveAssemblyReference.cache
