@@ -14,14 +14,41 @@ namespace Chaka_Proxy
         static void Main(string[] args)
         {
             TcpListener listener;
-            IPAddress ipaddress = IPAddress.Loopback;
-            int port = 8880;
+            IPAddress ipaddress;
+            string port;
+            string ip = null;
 
-            listener = new TcpListener(ipaddress, port);
-            listener.Start();
+            
 
+            Console.ForegroundColor = ConsoleColor.Magenta;
             Console.WriteLine("Welcome to Chaka's Proxy!");
+            Console.ForegroundColor = ConsoleColor.White;
+
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("What ip do you want to listen to?: ");
+            Console.ForegroundColor = ConsoleColor.White;
+
+            ip = Console.ReadLine();
+
+            if(!ip.ToString().ToLower().Equals( "localhost"))
+                ipaddress = IPAddress.Parse(Console.Read().ToString());
+            else
+                ipaddress = IPAddress.Loopback;
+
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("What port do you want to listen to?: ");
+            Console.ForegroundColor = ConsoleColor.White;
+            port = Console.ReadLine();
+
+            if (port == "")
+                port = "8880";
+
+            Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine("IP " + ipaddress.ToString() + " listening on port " + port.ToString() + "...");
+            Console.ForegroundColor = ConsoleColor.White;
+
+            listener = new TcpListener(ipaddress, Convert.ToInt32(port));
+            listener.Start();
 
             //Loop for accepting new connections
             while (true)

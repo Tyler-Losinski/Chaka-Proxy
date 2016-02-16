@@ -10,7 +10,8 @@ namespace Chaka_Proxy
 {
     class Proxy
     {
-        private static Dictionary<string, byte[]> serverCatch = new Dictionary<string, byte[]>();
+        private static Dictionary<string, byte[]> serverCache = new Dictionary<string, byte[]>();
+        private static Logger log = new Logger();
 
         public static void ProcessRequest(TcpClient client)
         {
@@ -21,6 +22,7 @@ namespace Chaka_Proxy
             List<string> returnHeaders = new List<string>();
 
             string host = null;
+            string hostIP = null;
 
             while (client.Connected)
             {
@@ -47,7 +49,8 @@ namespace Chaka_Proxy
                         {
                             if (ip[i].AddressFamily != AddressFamily.InterNetworkV6)
                             {
-                                t.Connect(ip[i], 80);
+                                t.Connect(ip[i], 80);                  
+                                hostIP = ip[i].ToString();
                                 i = ip.Length;
                             }
                         }
@@ -55,12 +58,13 @@ namespace Chaka_Proxy
                         serverNS = t.GetStream();
                         host = newHost;
                     }
-                    catch (Exception ex) 
+                    catch (Exception) 
                     {
-                        Console.WriteLine("Error occured setting up new host " + ex.Message);
+                        //Console.WriteLine("Error occured setting up new host " + ex.Message);
                     }
                 }
 
+                
                 PrintHeaders(headers, true);
                 //Send the request from the client
                 Send(serverNS, headers, byteContent);
@@ -76,15 +80,15 @@ namespace Chaka_Proxy
                 if (host == null)
                     host = "";
 
-                if (client.Connected && serverCatch.ContainsKey(host))
+                if (client.Connected && serverCache.ContainsKey(host))
                 {
-                    Console.WriteLine("Pulling " + host + " from catch!");
-                    Console.WriteLine("Number of items in catch: " + serverCatch.Count);
-                    Send(clientNS, returnHeaders, serverCatch[host]);
+                    Console.WriteLine("Pulling " + host + " from cache!");
+                    Console.WriteLine("Number of items in cache: " + serverCache.Count);
+                    Send(clientNS, returnHeaders, serverCache[host]);
                 }
                 else if (client.Connected)
                 {
-                    serverCatch.Add(host, returnByteContent);
+                    serverCache.Add(host, returnByteContent);
                     Send(clientNS, returnHeaders, returnByteContent);
                 }
                 else
@@ -93,13 +97,21 @@ namespace Chaka_Proxy
                     return;
                 }
 
+                log.LogRequest(hostIP, host, GetContentLength(returnHeaders).ToString());
+
                 try
                 {
-                    //Dispose of resources
-                    clientNS.Close();
-                    clientNS.Dispose();
-                    serverNS.Close();
-                    serverNS.Dispose();
+                    if (clientNS != null)
+                    {
+                        //Dispose of resources
+                        clientNS.Close();
+                        clientNS.Dispose();
+                    }
+                    if (serverNS != null)
+                    {
+                        serverNS.Close();
+                        serverNS.Dispose();
+                    }
                 }
                 catch (Exception ex) 
                 {
@@ -128,7 +140,7 @@ namespace Chaka_Proxy
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error occured while sending header: " + ex.Message);
+                    //Console.WriteLine("Error occured while sending header: " + ex.Message);
                 }
             }
             if (content != null)
@@ -139,7 +151,7 @@ namespace Chaka_Proxy
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error occured while sending content: " + ex.Message);
+                    //Console.WriteLine("Error occured while sending content: " + ex.Message);
                 }
             }
 
@@ -152,87 +164,29 @@ namespace Chaka_Proxy
         /// <param name="client"></param>
         private static void PrintHeaders(List<string> headers, bool client)
         {
-            Console.Write("\n\n====Headers ");
-            Console.WriteLine(client ? " From Client====" : " From Server====");
+            //Console.Write("\n\n====Headers ");
+            //Console.WriteLine(client ? " From Client====" : " From Server====");
 
-            for (int i = 0; i < headers.Count; i++)
-            {
-                for (int j = 0; j < headers[i].Length; j++)
-                {
-                    if (headers[i][j] == '\r')
-                    {
-                        Console.Write("\\r");
-                    }
-                    else if (headers[i][j] == '\n')
-                    {
-                        Console.Write("\\n");
-                    }
+            ////for (int i = 0; i < headers.Count; i++)
+            ////{
+            ////    for (int j = 0; j < headers[i].Length; j++)
+            ////    {
+            ////        if (headers[i][j] == '\r')
+            ////        {
+            ////            Console.Write("\\r");
+            ////        }
+            ////        else if (headers[i][j] == '\n')
+            ////        {
+            ////            Console.Write("\\n");
+            ////        }
 
-                    if (headers[i][j] != '\r')
-                    {
-                        Console.Write(headers[i][j]);
-                    }
-                }
-            }
-            Console.WriteLine("====End Headers====");
-        }
-
-        /// <summary>
-        /// Takes the address and removes everything after the .com
-        /// </summary>
-        /// <param name="headers"></param>
-        private static void Filter(List<string> headers)
-        {
-            string host = getHost(headers);
-            string newHeader = "";
-            string method = GetMethodHeader(headers);
-            string[] words = method.Split(' ');
-
-            foreach (string w in words)
-            {
-                if (w.Contains(host))
-                {
-                    int count = 0;
-                    for (int i = 0; i < w.Length; i++)
-                    {
-                        if ('/' == w[i])
-                        {
-                            count++;
-                            if (3 == count)
-                            {
-                                newHeader += w.Substring(i) + " ";
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    newHeader += w + " ";
-                }
-            }
-            newHeader = newHeader.TrimEnd(' ');
-            for (int i = 0; i < headers.Count(); i++)
-            {
-                if (headers[i].Contains(host) && !headers[i].Contains("Host:") && !headers[i].Contains("Referer"))
-                {
-                    headers[i] = newHeader;
-                    return;
-                }
-            }
-        }
-
-        private static string GetMethodHeader(List<string> headers)
-        {
-            string host = getHost(headers);
-            foreach (string header in headers)
-            {
-                if (header.Contains(host) && !header.Contains("Host:"))
-                {
-                    //Console.WriteLine(header);
-                    return header;
-                }
-            }
-            return null;
+            ////        if (headers[i][j] != '\r')
+            ////        {
+            ////            Console.Write(headers[i][j]);
+            ////        }
+            ////    }
+            ////}
+            //Console.WriteLine("====End Headers====");
         }
 
         /// <summary>
