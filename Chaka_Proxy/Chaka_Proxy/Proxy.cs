@@ -10,8 +10,9 @@ namespace Chaka_Proxy
 {
     class Proxy
     {
+        private static Dictionary<string, byte[]> serverCatch = new Dictionary<string, byte[]>();
 
-        public static void ProcessClient(TcpClient client)
+        public static void ProcessRequest(TcpClient client)
         {
             NetworkStream clientNS = client.GetStream();
             NetworkStream serverNS = null;
@@ -31,26 +32,33 @@ namespace Chaka_Proxy
                 //put the headers in a list 
                 headers = getHeaders(buffer);
 
-                byteContent = ReadContent(clientNS, GetContentLength(headers));
+                byteContent = ReadContentAsByteArray(clientNS, GetContentLength(headers));
 
                 newHost = getHost(headers);
 
                 if (newHost != host)
                 {
-                    TcpClient t = new TcpClient(); ;
-                    IPAddress[] ip = Dns.GetHostAddresses(newHost);
-
-                    for (int i = 0; i < ip.Length; i++)
+                    try
                     {
-                        if (ip[i].AddressFamily != AddressFamily.InterNetworkV6)
-                        {
-                            t.Connect(ip[i], 80);
-                            i = ip.Length;
-                        }
-                    }
+                        TcpClient t = new TcpClient(); ;
+                        IPAddress[] ip = Dns.GetHostAddresses(newHost);
 
-                    serverNS = t.GetStream();
-                    host = newHost;
+                        for (int i = 0; i < ip.Length; i++)
+                        {
+                            if (ip[i].AddressFamily != AddressFamily.InterNetworkV6)
+                            {
+                                t.Connect(ip[i], 80);
+                                i = ip.Length;
+                            }
+                        }
+
+                        serverNS = t.GetStream();
+                        host = newHost;
+                    }
+                    catch (Exception ex) 
+                    {
+                        Console.WriteLine("Error occured setting up new host " + ex.Message);
+                    }
                 }
 
                 PrintHeaders(headers, true);
@@ -63,10 +71,20 @@ namespace Chaka_Proxy
 
                 PrintHeaders(returnHeaders, false);
 
-                returnByteContent = ReadContent(serverNS, GetContentLength(returnHeaders));
+                returnByteContent = ReadContentAsByteArray(serverNS, GetContentLength(returnHeaders));
 
-                if (client.Connected)
+                if (host == null)
+                    host = "";
+
+                if (client.Connected && serverCatch.ContainsKey(host))
                 {
+                    Console.WriteLine("Pulling " + host + " from catch!");
+                    Console.WriteLine("Number of items in catch: " + serverCatch.Count);
+                    Send(clientNS, returnHeaders, serverCatch[host]);
+                }
+                else if (client.Connected)
+                {
+                    serverCatch.Add(host, returnByteContent);
                     Send(clientNS, returnHeaders, returnByteContent);
                 }
                 else
@@ -75,11 +93,29 @@ namespace Chaka_Proxy
                     return;
                 }
 
+                try
+                {
+                    //Dispose of resources
+                    clientNS.Close();
+                    clientNS.Dispose();
+                    serverNS.Close();
+                    serverNS.Dispose();
+                }
+                catch (Exception ex) 
+                {
+                    Console.WriteLine("Error disposing: " + ex.Message);
+                }
+
             }
 
         }
 
-
+        /// <summary>
+        /// Send the request using a network stream
+        /// </summary>
+        /// <param name="ns"></param>
+        /// <param name="headers"></param>
+        /// <param name="content"></param>
         private static void Send(NetworkStream ns, List<string> headers, byte[] content)
         {
 
@@ -103,7 +139,7 @@ namespace Chaka_Proxy
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Error occured while sending header: " + ex.Message);
+                    Console.WriteLine("Error occured while sending content: " + ex.Message);
                 }
             }
 
@@ -222,7 +258,7 @@ namespace Chaka_Proxy
             return host;
         }
 
-        private static byte[] ReadContent(NetworkStream ns, int contentLength)
+        private static byte[] ReadContentAsByteArray(NetworkStream ns, int contentLength)
         {
             byte[] returnByte = null;
 
@@ -289,14 +325,26 @@ namespace Chaka_Proxy
         {
             byte[] b = new byte[1];
             ASCIIEncoding encoding = new ASCIIEncoding();
+            string buff = "";
 
-            ns.Read(b, 0, 1);
-            string buff = encoding.GetString(b, 0, 1);
-            while (!buff.EndsWith("\r\n\r\n"))
+            try
             {
-                ns.Read(b, 0, 1);
-                buff += encoding.GetString(b, 0, 1);
+                if (ns.CanRead)
+                {
+                    ns.Read(b, 0, 1);
+                    buff = encoding.GetString(b, 0, 1);
+                    while (!buff.EndsWith("\r\n\r\n"))
+                    {
+                        ns.Read(b, 0, 1);
+                        buff += encoding.GetString(b, 0, 1);
+                    }
+                }
             }
+            catch (Exception ex) 
+            {
+                Console.WriteLine("Error reading headers: " + ex.Message);
+            }
+
             return buff;
         }
     }

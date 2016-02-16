@@ -29,7 +29,7 @@ namespace Chaka_Proxy
                 // Loop proceeds only after the TcpClient accepts a new connection.
                 TcpClient client = listener.AcceptTcpClient();
 
-                ThreadStart ts = delegate { Proxy.ProcessClient(client); };
+                ThreadStart ts = delegate { Proxy.ProcessRequest(client); };
                 Thread t = new Thread(ts);
                 t.Start();
             }
