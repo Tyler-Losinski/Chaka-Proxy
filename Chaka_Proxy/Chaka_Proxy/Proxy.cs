@@ -22,6 +22,7 @@ namespace Chaka_Proxy
             List<string> returnHeaders = new List<string>();
 
             string host = null;
+            string url = "";
             string hostIP = null;
 
             while (client.Connected)
@@ -33,7 +34,7 @@ namespace Chaka_Proxy
                 string buffer = ReadHeaders(clientNS);//Get request from client
                 //put the headers in a list 
                 headers = getHeaders(buffer);
-
+                url = GetFullURL(headers);
                 byteContent = ReadContentAsByteArray(clientNS, GetContentLength(headers));
 
                 newHost = getHost(headers);
@@ -80,15 +81,15 @@ namespace Chaka_Proxy
                 if (host == null)
                     host = "";
 
-                if (client.Connected && serverCache.ContainsKey(host))
+                if (client.Connected && serverCache.ContainsKey(url))
                 {
                     Console.WriteLine("Pulling " + host + " from cache!");
                     Console.WriteLine("Number of items in cache: " + serverCache.Count);
-                    Send(clientNS, returnHeaders, serverCache[host]);
+                    Send(clientNS, returnHeaders, serverCache[url]);
                 }
                 else if (client.Connected)
                 {
-                    serverCache.Add(host, returnByteContent);
+                    serverCache.Add(url, returnByteContent);
                     Send(clientNS, returnHeaders, returnByteContent);
                 }
                 else
@@ -112,6 +113,7 @@ namespace Chaka_Proxy
                         serverNS.Close();
                         serverNS.Dispose();
                     }
+                    
                 }
                 catch (Exception ex) 
                 {
@@ -203,12 +205,31 @@ namespace Chaka_Proxy
                 {
                     host = s.Split(' ').ElementAt(1);
                 }
+                else if(s.Contains("GET "))
+                    host = s.Split(' ').ElementAt(1);
 
             }
-            if (host != null && host.EndsWith("\r\n"))
-            {
+            if (host != null && host.EndsWith(":443\r\n"))
+                host = host.Split(new string[] { ":443\r\n" }, StringSplitOptions.None).ElementAt(0);
+            else if (host != null && host.EndsWith("\r\n"))
                 host = host.Split(new string[] { "\r\n" }, StringSplitOptions.None).ElementAt(0);
+
+            return host;
+        }
+
+        private static string GetFullURL(List<string> headers) 
+        {
+            string host = null;
+            foreach (string s in headers)
+            {
+                
+                if (s.Contains("GET "))
+                    host = s.Split(' ').ElementAt(1);
+
             }
+            if (host != null && host.EndsWith("HTTP/1.1\r\n"))
+                host = host.Split(new string[] { "HTTP/1.1\r\n" }, StringSplitOptions.None).ElementAt(0);
+
             return host;
         }
 
