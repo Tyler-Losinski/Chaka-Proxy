@@ -38,10 +38,7 @@ namespace Chaka_Proxy
                 if (newHost != host)
                 {
                     TcpClient t = new TcpClient(); ;
-                    // FIND THE IP OF THE DESTINATION
-                    // IF CLIENT WANTS NEW ADDRESS WE SWITCH DESTINATIONS
                     IPAddress[] ip = Dns.GetHostAddresses(newHost);
-
 
                     for (int i = 0; i < ip.Length; i++)
                     {
@@ -53,7 +50,6 @@ namespace Chaka_Proxy
                     }
 
                     serverNS = t.GetStream();
-                    // CONNECTED
                     host = newHost;
                 }
 
@@ -64,8 +60,6 @@ namespace Chaka_Proxy
                 string buff = ReadHeaders(serverNS);
 
                 returnHeaders = getHeaders(buff);
-
-                Console.WriteLine(headers[0]);
 
                 PrintHeaders(returnHeaders, false);
 
@@ -119,11 +113,11 @@ namespace Chaka_Proxy
         /// Prints the headrs to the command line
         /// </summary>
         /// <param name="headers"></param>
-        /// <param name="isOldHeaderValues"></param>
-        private static void PrintHeaders(List<string> headers, bool isOldHeaderValues)
+        /// <param name="client"></param>
+        private static void PrintHeaders(List<string> headers, bool client)
         {
             Console.Write("\n\n====Headers ");
-            Console.WriteLine(isOldHeaderValues ? " From Client====" : " From Server====");
+            Console.WriteLine(client ? " From Client====" : " From Server====");
 
             for (int i = 0; i < headers.Count; i++)
             {
