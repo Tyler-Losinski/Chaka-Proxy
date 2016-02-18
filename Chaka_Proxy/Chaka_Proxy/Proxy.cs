@@ -10,7 +10,7 @@ namespace Chaka_Proxy
 {
     class Proxy
     {
-        private static Dictionary<string, byte[]> serverCache = new Dictionary<string, byte[]>();
+        private static Dictionary<string,Tuple<List<string>,byte[]>> serverCache = new Dictionary<string, Tuple<List<string>,byte[]>>();
         private static Logger log = new Logger();
         private static object locker = new Object();
 
@@ -74,21 +74,27 @@ namespace Chaka_Proxy
 
 
                 PrintHeaders(headers, true);
-                //Send the request to the server
-                Send(serverNS, headers, byteContent);
-                //read the servers response header
-                string buff = ReadHeaders(serverNS);
-
-                returnHeaders = getHeaders(buff);
-
-                PrintHeaders(returnHeaders, false);
-                //Gets the content of the request
-                returnByteContent = ReadContentAsByteArray(serverNS, GetContentLength(returnHeaders));
 
                 if (host == null)
                     host = "";
                 if (url == null)
                     url = "";
+
+                if (!serverCache.ContainsKey(url))
+                {
+                    //Send the request to the server
+                    Send(serverNS, headers, byteContent);
+                    //read the servers response header
+                    string buff = ReadHeaders(serverNS);
+                    returnHeaders = getHeaders(buff);
+
+                    PrintHeaders(returnHeaders, false);
+                    //Gets the content of the request
+                    returnByteContent = ReadContentAsByteArray(serverNS, GetContentLength(returnHeaders));
+                }
+                
+
+                
                 //This sends the response to the client and pulls from the cache if it exists
                 if (client.Connected && serverCache.ContainsKey(url))
                 {
@@ -96,11 +102,13 @@ namespace Chaka_Proxy
                     Console.WriteLine("Pulling " + host + " from cache!");
                     Console.WriteLine("Number of items in cache: " + serverCache.Count);
                     Console.ResetColor();
-                    Send(clientNS, returnHeaders, serverCache[url]);
+                    Send(clientNS, serverCache[url].Item1, serverCache[url].Item2);
                 }
                 else if (client.Connected)
                 {
-                    serverCache.Add(url, returnByteContent);//Saves the content in cache
+                    Tuple<List<string>,byte[]> temp = new Tuple<List<string>,byte[]>(returnHeaders,returnByteContent);
+
+                    serverCache.Add(url, temp);//Saves the content in cache
                     Send(clientNS, returnHeaders, returnByteContent);
                 }
                 else
@@ -187,26 +195,26 @@ namespace Chaka_Proxy
             Console.Write("\n\n====Headers ");
             Console.WriteLine(client ? " From Client====" : " From Server====");
 
-            for (int i = 0; i < headers.Count; i++)
-            {
-                for (int j = 0; j < headers[i].Length; j++)
-                {
-                    if (headers[i][j] == '\r')
-                    {
-                        Console.Write("\\r");
-                    }
-                    else if (headers[i][j] == '\n')
-                    {
-                        Console.Write("\\n");
-                    }
+            //for (int i = 0; i < headers.Count; i++)
+            //{
+            //    for (int j = 0; j < headers[i].Length; j++)
+            //    {
+            //        if (headers[i][j] == '\r')
+            //        {
+            //            Console.Write("\\r");
+            //        }
+            //        else if (headers[i][j] == '\n')
+            //        {
+            //            Console.Write("\\n");
+            //        }
 
-                    if (headers[i][j] != '\r')
-                    {
-                        Console.Write(headers[i][j]);
-                    }
-                }
-            }
-            Console.WriteLine("====End Headers====");
+            //        if (headers[i][j] != '\r')
+            //        {
+            //            Console.Write(headers[i][j]);
+            //        }
+            //    }
+            //}
+            //Console.WriteLine("====End Headers====");
 
         }
 
