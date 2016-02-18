@@ -48,7 +48,9 @@ namespace Chaka_Proxy
             }
             catch (Exception ex)
             {
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("Error logging a log: " + ex.Message);
+                Console.ResetColor();
             }
         }
     }

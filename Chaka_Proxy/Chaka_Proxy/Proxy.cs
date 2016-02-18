@@ -12,7 +12,12 @@ namespace Chaka_Proxy
     {
         private static Dictionary<string, byte[]> serverCache = new Dictionary<string, byte[]>();
         private static Logger log = new Logger();
+        private static object locker = new Object();
 
+        /// <summary>
+        /// Main method for processing TCP Requests
+        /// </summary>
+        /// <param name="client"></param>
         public static void ProcessRequest(TcpClient client)
         {
             NetworkStream clientNS = client.GetStream();
@@ -35,10 +40,11 @@ namespace Chaka_Proxy
                 //put the headers in a list 
                 headers = getHeaders(buffer);
                 url = GetFullURL(headers);
+                //Gets the content of the request in a byte array
                 byteContent = ReadContentAsByteArray(clientNS, GetContentLength(headers));
 
                 newHost = getHost(headers);
-
+                //Sets up the network stream on the server
                 if (newHost != host)
                 {
                     try
@@ -50,7 +56,7 @@ namespace Chaka_Proxy
                         {
                             if (ip[i].AddressFamily != AddressFamily.InterNetworkV6)
                             {
-                                t.Connect(ip[i], 80);                  
+                                t.Connect(ip[i], 80);
                                 hostIP = ip[i].ToString();
                                 i = ip.Length;
                             }
@@ -59,40 +65,42 @@ namespace Chaka_Proxy
                         serverNS = t.GetStream();
                         host = newHost;
                     }
-                    catch (Exception) 
+                    catch (Exception)
                     {
                         return;
                         //Console.WriteLine("Error occured setting up new host " + ex.Message);
                     }
                 }
 
-                
-                PrintHeaders(headers, true);
-                //Send the request from the client
-                Send(serverNS, headers, byteContent);
 
+                PrintHeaders(headers, true);
+                //Send the request to the server
+                Send(serverNS, headers, byteContent);
+                //read the servers response header
                 string buff = ReadHeaders(serverNS);
 
                 returnHeaders = getHeaders(buff);
 
                 PrintHeaders(returnHeaders, false);
-
+                //Gets the content of the request
                 returnByteContent = ReadContentAsByteArray(serverNS, GetContentLength(returnHeaders));
 
                 if (host == null)
                     host = "";
                 if (url == null)
                     url = "";
-
+                //This sends the response to the client and pulls from the cache if it exists
                 if (client.Connected && serverCache.ContainsKey(url))
                 {
+                    Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("Pulling " + host + " from cache!");
                     Console.WriteLine("Number of items in cache: " + serverCache.Count);
+                    Console.ResetColor();
                     Send(clientNS, returnHeaders, serverCache[url]);
                 }
                 else if (client.Connected)
                 {
-                    serverCache.Add(url, returnByteContent);
+                    serverCache.Add(url, returnByteContent);//Saves the content in cache
                     Send(clientNS, returnHeaders, returnByteContent);
                 }
                 else
@@ -101,7 +109,11 @@ namespace Chaka_Proxy
                     return;
                 }
 
-                log.LogRequest(hostIP, host, GetContentLength(returnHeaders).ToString());
+                lock (locker)
+                {
+                    //Logs the tcp request
+                    log.LogRequest(hostIP, host, GetContentLength(returnHeaders).ToString());
+                }
 
                 try
                 {
@@ -116,12 +128,12 @@ namespace Chaka_Proxy
                         serverNS.Close();
                         serverNS.Dispose();
                     }
-                    
+
                 }
-                catch (Exception ex) 
+                catch (Exception ex)
                 {
-                    return;
                     Console.WriteLine("Error disposing: " + ex.Message);
+                    return;
                 }
 
             }
@@ -136,35 +148,33 @@ namespace Chaka_Proxy
         /// <param name="content"></param>
         private static void Send(NetworkStream ns, List<string> headers, byte[] content)
         {
-
-            foreach (string header in headers)
+            if (ns != null)
             {
-                try
+                foreach (string header in headers)
                 {
-
-                    ns.Write(Encoding.ASCII.GetBytes(header), 0, header.Length);
+                    try
+                    {
+                        if (ns.CanWrite)
+                            ns.Write(Encoding.ASCII.GetBytes(header), 0, header.Length);//Write the header to the network stream
+                    }
+                    catch (Exception)
+                    {
+                        return;
+                    }
                 }
-                catch (Exception ex)
+                if (content != null && ns.CanWrite)
                 {
-                    return;
-
-                    //Console.WriteLine("Error occured while sending header: " + ex.Message);
+                    try
+                    {
+                        //Write the content to the network stream
+                        ns.Write(content, 0, content.Length);
+                    }
+                    catch (Exception)
+                    {
+                        return;
+                    }
                 }
             }
-            if (content != null)
-            {
-                try
-                {
-                    ns.Write(content, 0, content.Length);
-                }
-                catch (Exception ex)
-                {
-                    return;
-
-                    //Console.WriteLine("Error occured while sending content: " + ex.Message);
-                }
-            }
-
         }
 
         /// <summary>
@@ -197,6 +207,7 @@ namespace Chaka_Proxy
                 }
             }
             Console.WriteLine("====End Headers====");
+
         }
 
         /// <summary>
@@ -213,7 +224,7 @@ namespace Chaka_Proxy
                 {
                     host = s.Split(' ').ElementAt(1);
                 }
-                else if(s.Contains("GET "))
+                else if (s.Contains("GET "))
                     host = s.Split(' ').ElementAt(1);
 
             }
@@ -225,12 +236,17 @@ namespace Chaka_Proxy
             return host;
         }
 
-        private static string GetFullURL(List<string> headers) 
+        /// <summary>
+        /// Gets the full url from the header
+        /// </summary>
+        /// <param name="headers"></param>
+        /// <returns></returns>
+        private static string GetFullURL(List<string> headers)
         {
             string host = null;
             foreach (string s in headers)
             {
-                
+
                 if (s.Contains("GET "))
                     host = s.Split(' ').ElementAt(1);
 
@@ -241,6 +257,12 @@ namespace Chaka_Proxy
             return host;
         }
 
+        /// <summary>
+        /// Reads the content from get request and puts it in a byte array
+        /// </summary>
+        /// <param name="ns"></param>
+        /// <param name="contentLength"></param>
+        /// <returns></returns>
         private static byte[] ReadContentAsByteArray(NetworkStream ns, int contentLength)
         {
             byte[] returnByte = null;
@@ -323,10 +345,11 @@ namespace Chaka_Proxy
                     }
                 }
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("Error reading headers: " + ex.Message);
+                Console.ResetColor();
             }
 
             return buff;

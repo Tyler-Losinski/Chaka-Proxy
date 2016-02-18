@@ -3,3 +3,4 @@ C:\Users\Tyler\Desktop\Repositories\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\bin\Rele
 C:\Users\Tyler\Desktop\Repositories\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\bin\Release\Chaka_Proxy.pdb
 C:\Users\Tyler\Desktop\Repositories\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\obj\Release\Chaka_Proxy.exe
 C:\Users\Tyler\Desktop\Repositories\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\obj\Release\Chaka_Proxy.pdb
+C:\Users\Tyler\Desktop\Repositories\Chaka-Proxy\Chaka_Proxy\Chaka_Proxy\obj\Release\Chaka_Proxy.csprojResolveAssemblyReference.cache
