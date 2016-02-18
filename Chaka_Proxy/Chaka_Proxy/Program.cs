@@ -30,8 +30,8 @@ namespace Chaka_Proxy
 
             ip = Console.ReadLine();
 
-            if(!ip.ToString().ToLower().Equals( "localhost"))
-                ipaddress = IPAddress.Parse(Console.Read().ToString());
+            if (!ip.ToString().ToLower().Equals("localhost") && !ip.ToString().ToLower().Equals(""))
+                ipaddress = IPAddress.Parse(ip);
             else
                 ipaddress = IPAddress.Loopback;
 
@@ -44,7 +44,13 @@ namespace Chaka_Proxy
                 port = "8880";
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("IP " + ipaddress.ToString() + " listening on port " + port.ToString() + "...");
+            Console.Write("IP ");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write(ipaddress.ToString());
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write(" listening on port ");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(port.ToString());
             Console.ForegroundColor = ConsoleColor.White;
 
             listener = new TcpListener(ipaddress, Convert.ToInt32(port));

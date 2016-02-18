@@ -61,6 +61,7 @@ namespace Chaka_Proxy
                     }
                     catch (Exception) 
                     {
+                        return;
                         //Console.WriteLine("Error occured setting up new host " + ex.Message);
                     }
                 }
@@ -80,6 +81,8 @@ namespace Chaka_Proxy
 
                 if (host == null)
                     host = "";
+                if (url == null)
+                    url = "";
 
                 if (client.Connected && serverCache.ContainsKey(url))
                 {
@@ -117,6 +120,7 @@ namespace Chaka_Proxy
                 }
                 catch (Exception ex) 
                 {
+                    return;
                     Console.WriteLine("Error disposing: " + ex.Message);
                 }
 
@@ -142,6 +146,8 @@ namespace Chaka_Proxy
                 }
                 catch (Exception ex)
                 {
+                    return;
+
                     //Console.WriteLine("Error occured while sending header: " + ex.Message);
                 }
             }
@@ -153,6 +159,8 @@ namespace Chaka_Proxy
                 }
                 catch (Exception ex)
                 {
+                    return;
+
                     //Console.WriteLine("Error occured while sending content: " + ex.Message);
                 }
             }
@@ -166,29 +174,29 @@ namespace Chaka_Proxy
         /// <param name="client"></param>
         private static void PrintHeaders(List<string> headers, bool client)
         {
-            //Console.Write("\n\n====Headers ");
-            //Console.WriteLine(client ? " From Client====" : " From Server====");
+            Console.Write("\n\n====Headers ");
+            Console.WriteLine(client ? " From Client====" : " From Server====");
 
-            ////for (int i = 0; i < headers.Count; i++)
-            ////{
-            ////    for (int j = 0; j < headers[i].Length; j++)
-            ////    {
-            ////        if (headers[i][j] == '\r')
-            ////        {
-            ////            Console.Write("\\r");
-            ////        }
-            ////        else if (headers[i][j] == '\n')
-            ////        {
-            ////            Console.Write("\\n");
-            ////        }
+            for (int i = 0; i < headers.Count; i++)
+            {
+                for (int j = 0; j < headers[i].Length; j++)
+                {
+                    if (headers[i][j] == '\r')
+                    {
+                        Console.Write("\\r");
+                    }
+                    else if (headers[i][j] == '\n')
+                    {
+                        Console.Write("\\n");
+                    }
 
-            ////        if (headers[i][j] != '\r')
-            ////        {
-            ////            Console.Write(headers[i][j]);
-            ////        }
-            ////    }
-            ////}
-            //Console.WriteLine("====End Headers====");
+                    if (headers[i][j] != '\r')
+                    {
+                        Console.Write(headers[i][j]);
+                    }
+                }
+            }
+            Console.WriteLine("====End Headers====");
         }
 
         /// <summary>
@@ -308,7 +316,7 @@ namespace Chaka_Proxy
                 {
                     ns.Read(b, 0, 1);
                     buff = encoding.GetString(b, 0, 1);
-                    while (!buff.EndsWith("\r\n\r\n"))
+                    while (!buff.Contains("\r\n\r\n"))
                     {
                         ns.Read(b, 0, 1);
                         buff += encoding.GetString(b, 0, 1);
@@ -317,6 +325,7 @@ namespace Chaka_Proxy
             }
             catch (Exception ex) 
             {
+                
                 Console.WriteLine("Error reading headers: " + ex.Message);
             }
 
