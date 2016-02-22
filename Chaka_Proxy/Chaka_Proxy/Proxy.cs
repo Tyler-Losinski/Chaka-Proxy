@@ -10,9 +10,11 @@ namespace Chaka_Proxy
 {
     class Proxy
     {
-        private static Dictionary<string,Tuple<List<string>,byte[]>> serverCache = new Dictionary<string, Tuple<List<string>,byte[]>>();
+        private static Dictionary<string,Tuple<List<string>,byte[]>> serverCache = 
+            new Dictionary<string, Tuple<List<string>,byte[]>>(); //Used for cache
+
         private static Logger log = new Logger();
-        private static object locker = new Object();
+        private static object locker = new Object();//Used to lock threads
 
         /// <summary>
         /// Main method for processing TCP Requests
@@ -33,17 +35,18 @@ namespace Chaka_Proxy
             while (client.Connected)
             {
                 string newHost;
-
                 byte[] byteContent = null;
                 byte[] returnByteContent = null;
+
                 string buffer = ReadHeaders(clientNS);//Get request from client
                 //put the headers in a list 
-                headers = getHeaders(buffer);
+                headers = GetHeaders(buffer);
+
                 url = GetFullURL(headers);
                 //Gets the content of the request in a byte array
                 byteContent = ReadContentAsByteArray(clientNS, GetContentLength(headers));
 
-                newHost = getHost(headers);
+                newHost = GetHost(headers);
                 //Sets up the network stream on the server
                 if (newHost != host)
                 {
@@ -86,15 +89,13 @@ namespace Chaka_Proxy
                     Send(serverNS, headers, byteContent);
                     //read the servers response header
                     string buff = ReadHeaders(serverNS);
-                    returnHeaders = getHeaders(buff);
+                    returnHeaders = GetHeaders(buff);
 
                     PrintHeaders(returnHeaders, false);
                     //Gets the content of the request
                     returnByteContent = ReadContentAsByteArray(serverNS, GetContentLength(returnHeaders));
                 }
-                
-
-                
+                              
                 //This sends the response to the client and pulls from the cache if it exists
                 if (client.Connected && serverCache.ContainsKey(url))
                 {
@@ -223,7 +224,7 @@ namespace Chaka_Proxy
         /// </summary>
         /// <param name="headers"></param>
         /// <returns></returns>
-        private static string getHost(List<string> headers)
+        private static string GetHost(List<string> headers)
         {
             string host = null;
             foreach (string s in headers)
@@ -315,7 +316,7 @@ namespace Chaka_Proxy
         /// </summary>
         /// <param name="buffer"></param>
         /// <returns></returns>
-        private static List<string> getHeaders(string buffer)
+        private static List<string> GetHeaders(string buffer)
         {
             List<string> returnHeaders;
             //Split the buffer into an array list
