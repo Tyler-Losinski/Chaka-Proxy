@@ -40,6 +40,7 @@ namespace Chaka_Proxy
 
             try
             {
+                sLogFormat = DateTime.Now.ToShortDateString().ToString() + " " + DateTime.Now.ToLongTimeString().ToString() + " ==> ";
                 StreamWriter sw = new StreamWriter(AppDomain.CurrentDomain.BaseDirectory + "\\LogFiles\\" + "proxy " + sLogTime + ".log" +".txt", true);
 
                 sw.WriteLine(sLogFormat + " " + browserIP + " " + URL + " " + size);
